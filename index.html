@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Dashboard 2019–2020</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <script>
+    /* Extend Tailwind with a custom accent colour */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#3b82d4', light: '#eff6ff', dark: '#1e40af' }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+  <!-- ===== HEADER ===== -->
+  <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900 tracking-tight">📊 Sales Dashboard</h1>
+        <p class="text-xs text-slate-500 mt-0.5">European Sales Analytics · 2019–2020</p>
+      </div>
+      <div id="last-updated" class="text-xs text-slate-400 self-end sm:self-auto"></div>
+    </div>
+  </header>
+
+  <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ===== FILTER BAR ===== -->
+    <section aria-label="Filters" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+      <div class="flex flex-wrap gap-4 items-end">
+        <!-- Region / Country -->
+        <div class="filter-group">
+          <label for="filter-region" class="filter-label">Region (Country)</label>
+          <select id="filter-region" class="filter-select">
+            <option value="all">All Regions</option>
+          </select>
+        </div>
+
+        <!-- Product Category -->
+        <div class="filter-group">
+          <label for="filter-category" class="filter-label">Product Category</label>
+          <select id="filter-category" class="filter-select">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+
+        <!-- Customer Type (derived: B2B vs B2C based on customer name) -->
+        <div class="filter-group">
+          <label for="filter-customer-type" class="filter-label">Customer Type</label>
+          <select id="filter-customer-type" class="filter-select">
+            <option value="all">All Types</option>
+            <option value="B2B">B2B (Company)</option>
+            <option value="B2C">B2C (Individual)</option>
+          </select>
+        </div>
+
+        <!-- Sales Channel (device_type) -->
+        <div class="filter-group">
+          <label for="filter-channel" class="filter-label">Sales Channel</label>
+          <select id="filter-channel" class="filter-select">
+            <option value="all">All Channels</option>
+          </select>
+        </div>
+
+        <!-- Reset button -->
+        <button id="btn-reset" class="ml-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-colors">
+          ↺ Reset Filters
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== KPI CARDS ===== -->
+    <section aria-label="Key Performance Indicators">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <article class="kpi-card">
+          <span class="kpi-icon">💰</span>
+          <div>
+            <p class="kpi-label">Total Revenue</p>
+            <p class="kpi-value" id="kpi-revenue">—</p>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-icon">🧾</span>
+          <div>
+            <p class="kpi-label">Total Transactions</p>
+            <p class="kpi-value" id="kpi-transactions">—</p>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-icon">📦</span>
+          <div>
+            <p class="kpi-label">Avg. Order Value</p>
+            <p class="kpi-value" id="kpi-avg-order">—</p>
+          </div>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-icon">📉</span>
+          <div>
+            <p class="kpi-label">Avg. Margin %</p>
+            <p class="kpi-value" id="kpi-avg-margin">—</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===== ROW 1: Sales Trend + Revenue by Region ===== -->
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+      <section class="chart-card xl:col-span-3" aria-label="Sales Trend">
+        <h2 class="chart-title">Sales Trend (Monthly)</h2>
+        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+      </section>
+      <section class="chart-card xl:col-span-2" aria-label="Revenue by Region">
+        <h2 class="chart-title">Revenue per Region</h2>
+        <div class="chart-wrap"><canvas id="chart-region"></canvas></div>
+      </section>
+    </div>
+
+    <!-- ===== ROW 2: Revenue by Category + Sales per Rep ===== -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <section class="chart-card" aria-label="Revenue by Product Category">
+        <h2 class="chart-title">Revenue per Product Category</h2>
+        <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
+      </section>
+      <section class="chart-card" aria-label="Sales per Sales Representative">
+        <h2 class="chart-title">Top Sales Representatives</h2>
+        <div class="chart-wrap"><canvas id="chart-sales-rep"></canvas></div>
+      </section>
+    </div>
+
+    <!-- ===== ROW 3: Customer Type + Payment Method + Sales Channel ===== -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section class="chart-card" aria-label="Customer Type Distribution">
+        <h2 class="chart-title">Customer Type</h2>
+        <div class="chart-wrap chart-wrap--sm"><canvas id="chart-customer-type"></canvas></div>
+      </section>
+      <section class="chart-card" aria-label="Sales Channel Distribution">
+        <h2 class="chart-title">Sales Channel</h2>
+        <div class="chart-wrap chart-wrap--sm"><canvas id="chart-channel"></canvas></div>
+      </section>
+      <section class="chart-card" aria-label="Sales Manager Distribution">
+        <h2 class="chart-title">Revenue by Sales Manager</h2>
+        <div class="chart-wrap chart-wrap--sm"><canvas id="chart-manager"></canvas></div>
+      </section>
+    </div>
+
+    <!-- ===== ROW 4: Order Value vs Margin Scatter + Top 10 Sales ===== -->
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+      <section class="chart-card xl:col-span-2" aria-label="Order Value vs Margin Scatter">
+        <h2 class="chart-title">Order Value vs. Margin (Scatter)</h2>
+        <div class="chart-wrap"><canvas id="chart-scatter"></canvas></div>
+      </section>
+      <section class="chart-card xl:col-span-3" aria-label="Top 10 Highest Sales">
+        <h2 class="chart-title">Top 10 Highest Orders</h2>
+        <div class="chart-wrap"><canvas id="chart-top10"></canvas></div>
+      </section>
+    </div>
+
+    <!-- ===== ROW 5: Quantity Sold per Category (order count) ===== -->
+    <div class="grid grid-cols-1 gap-4">
+      <section class="chart-card" aria-label="Quantity Sold per Category">
+        <h2 class="chart-title">Order Count per Category</h2>
+        <div class="chart-wrap"><canvas id="chart-qty-category"></canvas></div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="text-center text-xs text-slate-400 py-8 border-t border-slate-200 mt-4">
+    <p>Sales Dashboard 2019–2020 · Data source: <code>sales_data.json</code></p>
+    <p class="mt-1">
+      Dibuat oleh <strong class="text-slate-600">BOBY G SIHOMBING</strong>
+      &nbsp;·&nbsp; Built with <strong class="text-slate-600">IBM Bob</strong>
+    <p> Data: Kaggle Sales Dataset (Ronny Kimathi kaimenyi)
+    </p>
+  </footer>
+
+  <!-- Main JS -->
+  <script src="script.js"></script>
+</body>
+</html>
